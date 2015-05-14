@@ -3,17 +3,16 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
   
-      fbo.allocate(ofGetWidth(),ofGetHeight());
-      fboGlitch.allocate(320, 240);
+  fbo.allocate(ofGetWidth(), ofGetHeight());
+  fboGlitch.allocate(ofGetWidth(), ofGetHeight());
   
   ofSetFrameRate(60);
   ofSetVerticalSync(true);
   
+  speed = 50;
   
-//  bool succ = testImage.loadImage("http://toneelhuis.be/sites/default/files/profile_images/main/foto_3_1.jpg");
-//  if (!succ) {
-//    cout << "loading image failed ...\n";
-//  }
+  bShowHelp = true;
+  bDoGlitch = false;
   
   std::string url = "http://toneelhuis.be/en/rest/views/getprofiles?limit=0&offset=0";
   
@@ -23,7 +22,7 @@ void ofApp::setup(){
     
     ofLogNotice("ofApp::setup") << result.getRawString();
     if(result.isArray()) {
-      for(unsigned int i = 0; i < 2; i++) {
+      for(unsigned int i = 0; i < result.size(); i++) {
         
         // names
         std::string firstname = result[i]["field_field_profile_firstname"][0].asString();
@@ -63,20 +62,67 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-
+  fbo.begin();
   
-      fbo.begin();
-    ofBackground(0);
-  images[1].draw(0, 0);
-      fbo.end();
+  // draw here
+  ofBackground(0);
   
-      fbo.draw(0, 0,ofGetWidth()/2,ofGetHeight()/2);
-      fboGlitch.draw(fbo, ofGetWidth()/2, 0, ofGetWidth()/2, ofGetHeight()/2);
+  // the image to draw
+  float clampedSpeed = ofClamp(speed, 1, 1000);
+  int index = bDoGlitch ? (int)(ofGetElapsedTimeMillis() / clampedSpeed) % images.size() : 0;
+  ofImage image = images[index];
+  
+  // calculate width & height of image to fill the whole screen but keep the image's original ratio
+  float ratio = image.getWidth() / image.getHeight();
+  float newWidth = ofGetWidth();
+  float newHeight = newWidth / ratio;
+  if(newHeight < ofGetHeight()) {
+    newHeight = ofGetHeight();
+    newWidth = newHeight * ratio;
+  }
+  
+  // draw the image
+  image.setAnchorPercent(0.5, 0.5);
+  image.draw(ofGetWidth() / 2, ofGetHeight() / 2, newWidth, newHeight);
+  
+  
+  fbo.end();
+  
+  // draw with or without glitch effect
+  if(!bDoGlitch) {
+    fbo.draw(0, 0, ofGetWidth(), ofGetHeight());
+  } else {
+    fboGlitch.draw(fbo, 0, 0, ofGetWidth(), ofGetHeight());
+  }
+  
+  
+  /* show information */
+  string info = "";
+  info += "0,1,2,3 keys : Change glitch factor (low = higher glitch.\n";
+  info += "G key : Toggle glitch.\n";
+  info += "+,- keys : Faster, slower - current: " + ofToString(clampedSpeed) + "\n";
+  info += "H key : Hide or show this information.";
+  
+  if (bShowHelp){
+    ofSetColor(0, 200);
+    ofRect(25, 17, 465, 60);
+    ofSetColor(255);
+    ofDrawBitmapString(info, 30,30);
+  }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
+  if (key == '0') fboGlitch.setGlichResetProbability(0.75);
+  if (key == '1') fboGlitch.setGlichResetProbability(0.50);
+  if (key == '2') fboGlitch.setGlichResetProbability(0.25);
+  if (key == '3') fboGlitch.setGlichResetProbability(0.10);
+  
+  if (key == '+') speed += 25;
+  if (key == '-') speed -= 25;
 
+  if (key == 'g') bDoGlitch ^= true;
+  if (key == 'h') bShowHelp ^= true;
 }
 
 //--------------------------------------------------------------

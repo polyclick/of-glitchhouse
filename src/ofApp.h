@@ -25,4 +25,8 @@ class ofApp : public ofBaseApp{
 		
   ofxJSONElement result;
   std::vector<ofImage> images;
+  
+  bool bDoGlitch;
+  bool bShowHelp;
+  int speed;
 };
